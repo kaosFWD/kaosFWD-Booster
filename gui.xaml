@@ -1,42 +1,231 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="kaosFWD Booster" Height="500" Width="750" Background="#1E1E1E" Foreground="White" WindowStartupLocation="CenterScreen">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        Title="kaosFWD Booster" Height="600" Width="900" 
+        Background="#0F0F0F" Foreground="White" 
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize" MinHeight="500" MinWidth="750">
+    
+    <Window.Resources>
+        <!-- Stile per i pulsanti moderni -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#1E1E1E"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#00FFAA"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#00FFAA"/>
+                                <Setter Property="Foreground" Value="Black"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#00CC88"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="BorderBrush" Value="#555555"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-        <TextBlock Text="kaosFWD Booster" FontSize="26" FontWeight="Bold" Foreground="#00FFAA" Margin="0,0,0,10" Grid.Row="0"/>
+        <!-- Stile per pulsante Restore -->
+        <Style x:Key="RestoreButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
+            <Setter Property="BorderBrush" Value="#FF6B6B"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF6B6B"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20" Grid.Row="1">
-            <Button x:Name="BoostBtn" Content="🚀 Boost" Width="120" Height="40" Background="#00FFAA" Foreground="Black" FontWeight="Bold" Margin="5"/>
-            <Button x:Name="RestoreBtn" Content="💻 Ripristina" Width="120" Height="40" Background="#FF5555" Foreground="White" FontWeight="Bold" Margin="5"/>
-        </StackPanel>
+        <!-- Stile per pulsanti piccoli -->
+        <Style x:Key="SmallButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="MinWidth" Value="90"/>
+        </Style>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="3*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Stile per ListBox -->
+        <Style x:Key="ModernListBox" TargetType="ListBox">
+            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
 
-            <!-- Lista esclusioni -->
-            <StackPanel Grid.Column="0" Margin="5">
-                <TextBlock Text="Esclusioni" FontSize="16" FontWeight="Bold" Foreground="#00FFAA"/>
-                <ListBox x:Name="ExclusionList" Background="#2D2D2D" Foreground="White" Height="250" Margin="0,5,0,5"/>
-                <StackPanel Orientation="Horizontal">
-                    <Button x:Name="AddBtn" Content="➕ Aggiungi" Width="90" Margin="2"/>
-                    <Button x:Name="RemoveBtn" Content="➖ Rimuovi" Width="90" Margin="2"/>
+        <!-- Stile per TextBox -->
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontFamily" Value="Consolas, 'Courier New', monospace"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Gradiente per il titolo -->
+        <LinearGradientBrush x:Key="TitleGradient" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#00FFAA" Offset="0"/>
+            <GradientStop Color="#00CCFF" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Resources>
+
+    <Border Background="#0F0F0F" CornerRadius="10" Margin="5">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header con titolo -->
+            <Border Grid.Row="0" Background="#1A1A1A" CornerRadius="8" Padding="20,15" Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="kaosFWD Booster" 
+                               FontSize="32" 
+                               FontWeight="Bold" 
+                               Foreground="{StaticResource TitleGradient}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Ottimizza le prestazioni di gaming chiudendo processi non necessari" 
+                               FontSize="14" 
+                               Foreground="#AAAAAA" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,5,0,0"/>
                 </StackPanel>
+            </Border>
+
+            <!-- Pulsanti principali -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20" Grid.Row="1">
+                <Button x:Name="BoostBtn" 
+                        Content="🚀 BOOST GAMING" 
+                        Width="160" Height="50" 
+                        Style="{StaticResource ModernButton}"
+                        Margin="10"/>
+                <Button x:Name="RestoreBtn" 
+                        Content="💻 RIPRISTINA" 
+                        Width="160" Height="50" 
+                        Style="{StaticResource RestoreButton}"
+                        Margin="10"/>
             </StackPanel>
 
-            <!-- Log -->
-            <StackPanel Grid.Column="1" Margin="5">
-                <TextBlock Text="Log" FontSize="16" FontWeight="Bold" Foreground="#00FFAA"/>
-                <TextBox x:Name="LogBox" Background="#2D2D2D" Foreground="White" Height="300" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"/>
-            </StackPanel>
+            <!-- Contenuto principale -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" MaxWidth="300"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Panel esclusioni -->
+                <Border Grid.Column="0" 
+                        Background="#1A1A1A" 
+                        CornerRadius="10" 
+                        Padding="15" 
+                        Margin="0,0,10,0">
+                    <StackPanel>
+                        <TextBlock Text="🛡️ PROCESSI PROTETTI" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="#00FFAA" 
+                                   Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Questi processi non verranno mai chiusi durante il boost:" 
+                                   FontSize="11" 
+                                   Foreground="#CCCCCC" 
+                                   TextWrapping="Wrap" 
+                                   Margin="0,0,0,10"/>
+                        
+                        <ListBox x:Name="ExclusionList" 
+                                 Style="{StaticResource ModernListBox}"
+                                 Height="280" 
+                                 Margin="0,0,0,10"/>
+                        
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button x:Name="AddBtn" 
+                                    Content="➕ Aggiungi" 
+                                    Style="{StaticResource SmallButton}"
+                                    Margin="2"/>
+                            <Button x:Name="RemoveBtn" 
+                                    Content="➖ Rimuovi" 
+                                    Style="{StaticResource SmallButton}"
+                                    Margin="2"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Panel log -->
+                <Border Grid.Column="1" 
+                        Background="#1A1A1A" 
+                        CornerRadius="10" 
+                        Padding="15" 
+                        Margin="10,0,0,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="📋 LOG ATTIVITÀ" 
+                                       FontSize="16" 
+                                       FontWeight="Bold" 
+                                       Foreground="#00FFAA"/>
+                            <Border Background="#00FFAA" 
+                                    CornerRadius="10" 
+                                    Padding="5,2" 
+                                    Margin="10,0,0,0">
+                                <TextBlock Text="LIVE" 
+                                           FontSize="10" 
+                                           FontWeight="Bold" 
+                                           Foreground="Black"/>
+                            </Border>
+                        </StackPanel>
+                        
+                        <Border Background="#0F0F0F" 
+                                CornerRadius="5" 
+                                BorderBrush="#333333" 
+                                BorderThickness="1">
+                            <TextBox x:Name="LogBox" 
+                                     Style="{StaticResource ModernTextBox}"
+                                     Height="320" 
+                                     IsReadOnly="True" 
+                                     AcceptsReturn="True" 
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Footer -->
+            <Border Grid.Row="3" 
+                    Background="#1A1A1A" 
+                    CornerRadius="8" 
+                    Padding="15,10" 
+                    Margin="0,20,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="⚠️ Usa sempre il Ripristina per riaprire le applicazioni chiuse" 
+                               FontSize="12" 
+                               Foreground="#FFB366" 
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
         </Grid>
-    </Grid>
+    </Border>
 </Window>
