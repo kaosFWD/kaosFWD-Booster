@@ -1,7 +1,13 @@
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-Add-Type -AssemblyName Microsoft.VisualBasic
+
+# Carica Microsoft.VisualBasic per InputBox
+try {
+    Add-Type -AssemblyName Microsoft.VisualBasic
+} catch {
+    # Se fallisce, useremo una finestra personalizzata
+}
 
 # Percorsi file
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
@@ -66,7 +72,108 @@ function Save-Exclusions {
 
 function Show-InputBox {
     param([string]$Title, [string]$Prompt)
-    return [Microsoft.VisualBasic.Interaction]::InputBox($Prompt, $Title)
+    
+    # Prova prima con Microsoft.VisualBasic
+    try {
+        return [Microsoft.VisualBasic.Interaction]::InputBox($Prompt, $Title)
+    } catch {
+        # Fallback: usando Windows.Forms
+        $form = New-Object System.Windows.Forms.Form
+        $form.Text = $Title
+        $form.Size = New-Object System.Drawing.Size(400, 150)
+        $form.StartPosition = "CenterParent"
+        $form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+        $form.ForeColor = [System.Drawing.Color]::White
+        
+        $label = New-Object System.Windows.Forms.Label
+        $label.Location = New-Object System.Drawing.Point(10, 20)
+        $label.Size = New-Object System.Drawing.Size(370, 20)
+        $label.Text = $Prompt
+        $form.Controls.Add($label)
+        
+        $textBox = New-Object System.Windows.Forms.TextBox
+        $textBox.Location = New-Object System.Drawing.Point(10, 50)
+        $textBox.Size = New-Object System.Drawing.Size(360, 20)
+        $form.Controls.Add($textBox)
+        
+        $okButton = New-Object System.Windows.Forms.Button
+        $okButton.Location = New-Object System.Drawing.Point(215, 80)
+        $okButton.Size = New-Object System.Drawing.Size(75, 23)
+        $okButton.Text = "OK"
+        $okButton.Add_Click({ $form.DialogResult = "OK" })
+        $form.Controls.Add($okButton)
+        
+        $cancelButton = New-Object System.Windows.Forms.Button
+        $cancelButton.Location = New-Object System.Drawing.Point(295, 80)
+        $cancelButton.Size = New-Object System.Drawing.Size(75, 23)
+        $cancelButton.Text = "Annulla"
+        $cancelButton.Add_Click({ $form.DialogResult = "Cancel" })
+        $form.Controls.Add($cancelButton)
+        
+        $form.AcceptButton = $okButton
+        $form.CancelButton = $cancelButton
+        
+        if ($form.ShowDialog() -eq "OK") {
+            return $textBox.Text
+        }
+        return ""
+    }
+}
+
+function Show-ProcessSelector {
+    # Usa Windows Forms per semplicità
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Seleziona Processo"
+    $form.Size = New-Object System.Drawing.Size(500, 400)
+    $form.StartPosition = "CenterParent"
+    $form.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+    $form.ForeColor = [System.Drawing.Color]::White
+    
+    $label = New-Object System.Windows.Forms.Label
+    $label.Location = New-Object System.Drawing.Point(10, 10)
+    $label.Size = New-Object System.Drawing.Size(470, 20)
+    $label.Text = "Seleziona un processo dalla lista:"
+    $form.Controls.Add($label)
+    
+    $listBox = New-Object System.Windows.Forms.ListBox
+    $listBox.Location = New-Object System.Drawing.Point(10, 40)
+    $listBox.Size = New-Object System.Drawing.Size(460, 280)
+    $listBox.BackColor = [System.Drawing.Color]::FromArgb(45, 45, 45)
+    $listBox.ForeColor = [System.Drawing.Color]::White
+    
+    # Carica processi
+    $processes = Get-Process | Sort-Object ProcessName | ForEach-Object { 
+        "$($_.ProcessName) (PID: $($_.Id))" 
+    }
+    foreach ($proc in $processes) {
+        $listBox.Items.Add($proc)
+    }
+    
+    $form.Controls.Add($listBox)
+    
+    $okButton = New-Object System.Windows.Forms.Button
+    $okButton.Location = New-Object System.Drawing.Point(315, 330)
+    $okButton.Size = New-Object System.Drawing.Size(75, 23)
+    $okButton.Text = "Seleziona"
+    $okButton.Add_Click({ 
+        if ($listBox.SelectedItem) {
+            $form.DialogResult = "OK"
+        }
+    })
+    $form.Controls.Add($okButton)
+    
+    $cancelButton = New-Object System.Windows.Forms.Button
+    $cancelButton.Location = New-Object System.Drawing.Point(395, 330)
+    $cancelButton.Size = New-Object System.Drawing.Size(75, 23)
+    $cancelButton.Text = "Annulla"
+    $cancelButton.Add_Click({ $form.DialogResult = "Cancel" })
+    $form.Controls.Add($cancelButton)
+    
+    if ($form.ShowDialog() -eq "OK" -and $listBox.SelectedItem) {
+        $selectedText = $listBox.SelectedItem
+        return ($selectedText -split ' \(PID:')[0]
+    }
+    return ""
 }
 
 function Invoke-Boost {
@@ -226,7 +333,17 @@ $RestoreBtn.Add_Click({
 })
 
 $AddBtn.Add_Click({
-    $input = Show-InputBox "Aggiungi esclusione" "Inserisci nome processo (senza .exe):"
+    # Menu di scelta semplice
+    $choice = [System.Windows.MessageBox]::Show("Come vuoi aggiungere l'esclusione?`n`nSì = Inserisci manualmente`nNo = Seleziona da processi correnti", "Metodo di aggiunta", "YesNoCancel", "Question")
+    
+    $input = ""
+    if ($choice -eq "Yes") {
+        $input = Show-InputBox "Aggiungi esclusione" "Inserisci nome processo (senza .exe):"
+    }
+    elseif ($choice -eq "No") {
+        $input = Show-ProcessSelector
+    }
+    
     if ($input -and $input.Trim() -ne "") {
         $input = $input.Trim()
         $list = Load-Exclusions
