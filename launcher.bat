@@ -1,3 +1,4 @@
 @echo off
-set SCRIPT_DIR=%~dp0
-powershell -NoExit -ExecutionPolicy Bypass -File "%SCRIPT_DIR%kaosFWD-Booster.ps1"
+cd /d "%~dp0"
+powershell.exe -ExecutionPolicy Bypass -File "kaosFWD-Booster.ps1"
+pause

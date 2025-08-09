@@ -1,41 +1,35 @@
-# kaosFWD Booster - Version Final
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName Microsoft.VisualBasic
-[System.Windows.Forms.Application]::EnableVisualStyles()
 
-# Percorsi file dati
+# Percorsi file
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $GuiPath = Join-Path $ScriptDir "gui.xaml"
 $ExclusionsFile = Join-Path $ScriptDir "exclusions.json"
 $ClosedAppsFile = Join-Path $ScriptDir "closed_apps.json"
 
-# Verifica file GUI
+# Verifica GUI
 if (-not (Test-Path $GuiPath)) {
-    [System.Windows.MessageBox]::Show("File GUI non trovato: $GuiPath", "Errore avvio", "OK", "Error")
-    Write-Host "Errore: File GUI non trovato. Premi un tasto per uscire..."
+    Write-Host "File GUI non trovato: $GuiPath"
     Read-Host "Premi INVIO per uscire"
     exit
 }
 
-# Crea file exclusions se non esiste
+# Crea file se non esistono
 if (-not (Test-Path $ExclusionsFile)) {
     $defaultExclusions = @("explorer", "powershell", "cmd", "winlogon", "csrss", "wininit", "services", "lsass", "dwm")
     $defaultExclusions | ConvertTo-Json | Out-File $ExclusionsFile -Encoding UTF8
 }
 
-# Crea file closed_apps se non esiste o è vuoto
 if (-not (Test-Path $ClosedAppsFile)) {
-    @() | ConvertTo-Json | Out-File $ClosedAppsFile -Encoding UTF8
-} elseif ((Get-Content $ClosedAppsFile -Raw -ErrorAction SilentlyContinue).Trim() -eq "") {
     @() | ConvertTo-Json | Out-File $ClosedAppsFile -Encoding UTF8
 }
 
-# Variabili globali per i controlli
+# Variabile globale
 $global:LogBox = $null
 
-# Funzioni helper
+# Funzioni
 function Write-Log {
     param([string]$message)
     if ($global:LogBox) {
@@ -48,12 +42,13 @@ function Write-Log {
 
 function Load-Exclusions {
     try {
-        $content = Get-Content $ExclusionsFile -Raw -ErrorAction Stop
+        $content = Get-Content $ExclusionsFile -Raw
         if ($content.Trim()) {
             return ($content | ConvertFrom-Json)
         }
-    } catch {
-        Write-Log "Errore caricamento esclusioni: $($_.Exception.Message)"
+    }
+    catch {
+        Write-Log "Errore caricamento esclusioni"
     }
     return @("explorer", "powershell", "cmd", "winlogon", "csrss", "wininit", "services", "lsass", "dwm")
 }
@@ -63,23 +58,21 @@ function Save-Exclusions {
     try {
         $list | ConvertTo-Json | Out-File $ExclusionsFile -Encoding UTF8
         Write-Log "Esclusioni salvate"
-    } catch {
-        Write-Log "Errore salvataggio esclusioni: $($_.Exception.Message)"
+    }
+    catch {
+        Write-Log "Errore salvataggio esclusioni"
     }
 }
 
-# Funzione InputBox
 function Show-InputBox {
     param([string]$Title, [string]$Prompt)
     return [Microsoft.VisualBasic.Interaction]::InputBox($Prompt, $Title)
 }
 
-# Funzione per eseguire Boost
 function Invoke-Boost {
-    Write-Log "🚀 Avvio modalità Boost..."
+    Write-Log "Avvio modalità Boost..."
     
     $Exclusions = Load-Exclusions
-    # Processi di sistema critici che non devono mai essere chiusi
     $CriticalProcesses = @(
         "System", "Registry", "Idle", "winlogon", "csrss", "wininit", 
         "services", "lsass", "dwm", "audiodg", "conhost", "smss",
@@ -98,72 +91,55 @@ function Invoke-Boost {
     foreach ($proc in $ProcessesToClose) {
         try {
             $path = $null
-            $windowTitle = ""
-            
-            # Tenta di ottenere il percorso del processo
             try { 
                 $path = $proc.Path 
-                $windowTitle = $proc.MainWindowTitle
-            } catch { }
+            }
+            catch { }
             
-            # Tenta chiusura gentile prima
-            $closed = $false
             if ($proc.CloseMainWindow()) {
-                Start-Sleep -Milliseconds 500
-                if ($proc.HasExited) {
-                    $closed = $true
-                }
+                Start-Sleep -Milliseconds 300
             }
             
-            if (-not $closed) {
+            if (-not $proc.HasExited) {
                 $proc.Kill()
-                Start-Sleep -Milliseconds 100
             }
             
             $ClosedList += @{
                 Name = $proc.ProcessName
                 Path = $path
-                WindowTitle = $windowTitle
-                Id = $proc.Id
             }
             
-            Write-Log "✅ Chiuso: $($proc.ProcessName)"
-            
-        } catch {
-            Write-Log "❌ Errore chiudendo $($proc.ProcessName): $($_.Exception.Message)"
+            Write-Log "Chiuso: $($proc.ProcessName)"
+        }
+        catch {
+            Write-Log "Errore chiudendo $($proc.ProcessName)"
         }
     }
     
-    # Salva la lista delle app chiuse
     try {
         $ClosedList | ConvertTo-Json | Out-File $ClosedAppsFile -Encoding UTF8
-        Write-Log "🎯 Modalità Boost attivata! Chiusi $($ClosedList.Count) processi"
-    } catch {
-        Write-Log "❌ Errore salvando lista app chiuse: $($_.Exception.Message)"
+        Write-Log "Modalità Boost attivata! Chiusi $($ClosedList.Count) processi"
+    }
+    catch {
+        Write-Log "Errore salvando lista app chiuse"
     }
     
-    # Ottimizzazioni aggiuntive
-    try {
-        [System.GC]::Collect()
-        Write-Log "🧹 Memoria ottimizzata"
-    } catch {
-        Write-Log "⚠️ Errore durante ottimizzazioni: $($_.Exception.Message)"
-    }
+    [System.GC]::Collect()
+    Write-Log "Memoria ottimizzata"
 }
 
-# Funzione per ripristinare app chiuse
 function Restore-Apps {
-    Write-Log "💻 Avvio ripristino applicazioni..."
+    Write-Log "Avvio ripristino applicazioni..."
     
     if (-not (Test-Path $ClosedAppsFile)) {
-        Write-Log "ℹ️ Nessuna app da riaprire"
+        Write-Log "Nessuna app da riaprire"
         return
     }
     
     try {
         $content = Get-Content $ClosedAppsFile -Raw
         if (-not $content.Trim()) {
-            Write-Log "ℹ️ Lista app vuota"
+            Write-Log "Lista app vuota"
             return
         }
         
@@ -173,24 +149,22 @@ function Restore-Apps {
         foreach ($app in $Apps) {
             if ($app.Path -and (Test-Path $app.Path)) {
                 try {
-                    Start-Process $app.Path -ErrorAction Stop
-                    Write-Log "✅ Riaperto: $($app.Name)"
+                    Start-Process $app.Path
+                    Write-Log "Riaperto: $($app.Name)"
                     $RestoredCount++
                     Start-Sleep -Milliseconds 200
-                } catch {
-                    Write-Log "❌ Errore riaprendo $($app.Name): $($_.Exception.Message)"
                 }
-            } else {
-                Write-Log "⚠️ Percorso non trovato per: $($app.Name)"
+                catch {
+                    Write-Log "Errore riaprendo $($app.Name)"
+                }
             }
         }
         
-        # Pulisce il file dopo il ripristino
         @() | ConvertTo-Json | Out-File $ClosedAppsFile -Encoding UTF8
-        Write-Log "🎯 Ripristino completato! Riaperti $RestoredCount processi"
-        
-    } catch {
-        Write-Log "❌ Errore durante il ripristino: $($_.Exception.Message)"
+        Write-Log "Ripristino completato! Riaperti $RestoredCount processi"
+    }
+    catch {
+        Write-Log "Errore durante il ripristino"
     }
 }
 
@@ -199,8 +173,9 @@ try {
     [xml]$XAML = Get-Content $GuiPath -Encoding UTF8
     $Reader = (New-Object System.Xml.XmlNodeReader $XAML)
     $Window = [Windows.Markup.XamlReader]::Load($Reader)
-} catch {
-    [System.Windows.MessageBox]::Show("Errore caricamento GUI: $($_.Exception.Message)", "Errore", "OK", "Error")
+}
+catch {
+    Write-Host "Errore caricamento GUI"
     Read-Host "Premi INVIO per uscire"
     exit
 }
@@ -213,36 +188,39 @@ $RemoveBtn = $Window.FindName("RemoveBtn")
 $ExclusionList = $Window.FindName("ExclusionList")
 $global:LogBox = $Window.FindName("LogBox")
 
-# Verifica che tutti i controlli siano stati trovati
+# Verifica controlli
 if (-not $BoostBtn -or -not $RestoreBtn -or -not $AddBtn -or -not $RemoveBtn -or -not $ExclusionList -or -not $global:LogBox) {
-    [System.Windows.MessageBox]::Show("Errore: Alcuni controlli GUI non sono stati trovati", "Errore", "OK", "Error")
+    Write-Host "Errore: Controlli GUI non trovati"
     Read-Host "Premi INVIO per uscire"
     exit
 }
 
-# Carica lista esclusioni nella GUI
+# Carica esclusioni
 try {
     $ExclusionList.ItemsSource = Load-Exclusions
-    Write-Log "🔧 kaosFWD Booster caricato correttamente"
-} catch {
-    Write-Log "❌ Errore caricamento esclusioni: $($_.Exception.Message)"
+    Write-Log "kaosFWD Booster caricato correttamente"
+}
+catch {
+    Write-Log "Errore caricamento esclusioni"
 }
 
-# Eventi pulsanti
-$BoostBtn.Add_Click({ 
+# Eventi
+$BoostBtn.Add_Click({
     $BoostBtn.IsEnabled = $false
     try {
         Invoke-Boost
-    } finally {
+    }
+    finally {
         $BoostBtn.IsEnabled = $true
     }
 })
 
-$RestoreBtn.Add_Click({ 
+$RestoreBtn.Add_Click({
     $RestoreBtn.IsEnabled = $false
     try {
         Restore-Apps
-    } finally {
+    }
+    finally {
         $RestoreBtn.IsEnabled = $true
     }
 })
@@ -257,9 +235,10 @@ $AddBtn.Add_Click({
             Save-Exclusions $list
             $ExclusionList.ItemsSource = $null
             $ExclusionList.ItemsSource = $list
-            Write-Log "➕ Aggiunta esclusione: $input"
-        } else {
-            Write-Log "⚠️ Esclusione già presente: $input"
+            Write-Log "Aggiunta esclusione: $input"
+        }
+        else {
+            Write-Log "Esclusione già presente: $input"
         }
     }
 })
@@ -271,22 +250,23 @@ $RemoveBtn.Add_Click({
         Save-Exclusions $list
         $ExclusionList.ItemsSource = $null
         $ExclusionList.ItemsSource = $list
-        Write-Log "➖ Rimossa esclusione: $selectedItem"
-    } else {
-        Write-Log "⚠️ Seleziona un elemento da rimuovere"
+        Write-Log "Rimossa esclusione: $selectedItem"
+    }
+    else {
+        Write-Log "Seleziona un elemento da rimuovere"
     }
 })
 
-# Gestione chiusura finestra
 $Window.Add_Closing({
-    Write-Log "👋 Chiusura kaosFWD Booster"
+    Write-Log "Chiusura kaosFWD Booster"
 })
 
 # Mostra finestra
 try {
-    Write-Log "🚀 Interfaccia pronta all'uso"
+    Write-Log "Interfaccia pronta all'uso"
     $null = $Window.ShowDialog()
-} catch {
-    Write-Host "Errore visualizzazione finestra: $($_.Exception.Message)"
+}
+catch {
+    Write-Host "Errore visualizzazione finestra"
     Read-Host "Premi INVIO per uscire"
 }
