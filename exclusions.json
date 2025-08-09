@@ -1,5 +1,17 @@
-[
+﻿[
     "explorer",
     "powershell",
-    "cmd"
+    "cmd",
+    "winlogon",
+    "csrss",
+    "wininit",
+    "services",
+    "lsass",
+    "dwm",
+    "audiodg",
+    "conhost",
+    "smss",
+    "fontdrvhost",
+    "WUDFHost",
+    "svchost"
 ]
