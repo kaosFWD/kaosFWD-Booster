@@ -1,4 +1,4 @@
-﻿# === kaosFWD Gaming Booster v2.0 ===
+# === kaosFWD Gaming Booster v2.0 ===
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
